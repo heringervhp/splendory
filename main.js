@@ -68,44 +68,155 @@ filterButtons.forEach(button => {
    SLIDER DEPOIMENTOS
 ========================================================== */
 
-const testimonials =
-    document.querySelectorAll(
-        ".testimonial"
-    );
+const testimonialViewport =
+    document.querySelector(".testimonial-viewport");
+
+const testimonialTrack =
+    document.querySelector(".testimonial-slider");
+
+const testimonialItems =
+    Array.from(document.querySelectorAll(".testimonial"));
+
+const testimonialPrev =
+    document.querySelector(".testimonial-prev");
+
+const testimonialNext =
+    document.querySelector(".testimonial-next");
+
+const testimonialDots =
+    document.querySelector(".testimonial-dots");
 
 let testimonialIndex = 0;
+let testimonialTimer;
+let testimonialVisible = 3;
 
-function nextTestimonial() {
-
-    testimonials.forEach(item => {
-
-        item.classList.remove("active");
-
-    });
-
-    testimonialIndex++;
-
-    if (
-        testimonialIndex >= testimonials.length
-    ) {
-
-        testimonialIndex = 0;
-
-    }
-
-    testimonials[
-        testimonialIndex
-    ].classList.add("active");
-
+function getVisibleTestimonials() {
+    if (window.innerWidth <= 560) return 1;
+    if (window.innerWidth <= 900) return 2;
+    return 3;
 }
 
-if (testimonials.length > 0) {
+function getMaxTestimonialIndex() {
+    return Math.max(
+        0,
+        testimonialItems.length - testimonialVisible
+    );
+}
 
-    setInterval(
-        nextTestimonial,
-        5000
+function renderTestimonialDots() {
+    if (!testimonialDots) return;
+
+    testimonialDots.replaceChildren();
+
+    const pageCount =
+        getMaxTestimonialIndex() + 1;
+
+    for (let i = 0; i < pageCount; i++) {
+        const dot = document.createElement("button");
+
+        dot.type = "button";
+        dot.setAttribute(
+            "aria-label",
+            `Mostrar grupo de depoimentos ${i + 1}`
+        );
+
+        dot.classList.toggle(
+            "active",
+            i === testimonialIndex
+        );
+
+        dot.addEventListener("click", () => {
+            testimonialIndex = i;
+            updateTestimonials();
+            restartTestimonialTimer();
+        });
+
+        testimonialDots.appendChild(dot);
+    }
+}
+
+function updateTestimonials() {
+    if (!testimonialTrack || testimonialItems.length === 0) {
+        return;
+    }
+
+    testimonialVisible = getVisibleTestimonials();
+
+    testimonialIndex = Math.min(
+        testimonialIndex,
+        getMaxTestimonialIndex()
     );
 
+    const item = testimonialItems[0];
+    const itemWidth = item.getBoundingClientRect().width;
+
+    const gap = parseFloat(
+        getComputedStyle(testimonialTrack).columnGap
+    ) || 0;
+
+    testimonialTrack.style.transform =
+        `translateX(-${testimonialIndex * (itemWidth + gap)}px)`;
+
+    renderTestimonialDots();
+
+    if (testimonialPrev) {
+        testimonialPrev.disabled = testimonialIndex === 0;
+    }
+
+    if (testimonialNext) {
+        testimonialNext.disabled =
+            testimonialIndex === getMaxTestimonialIndex();
+    }
+}
+
+function nextTestimonial() {
+    if (testimonialIndex < getMaxTestimonialIndex()) {
+        testimonialIndex++;
+    } else {
+        testimonialIndex = 0;
+    }
+
+    updateTestimonials();
+}
+
+function previousTestimonial() {
+    if (testimonialIndex > 0) {
+        testimonialIndex--;
+    } else {
+        testimonialIndex = getMaxTestimonialIndex();
+    }
+
+    updateTestimonials();
+}
+
+function restartTestimonialTimer() {
+    clearInterval(testimonialTimer);
+
+    if (getMaxTestimonialIndex() > 0) {
+        testimonialTimer = setInterval(
+            nextTestimonial,
+            5000
+        );
+    }
+}
+
+if (testimonialViewport && testimonialTrack &&
+    testimonialItems.length > 0) {
+
+    testimonialNext?.addEventListener("click", () => {
+        nextTestimonial();
+        restartTestimonialTimer();
+    });
+
+    testimonialPrev?.addEventListener("click", () => {
+        previousTestimonial();
+        restartTestimonialTimer();
+    });
+
+    window.addEventListener("resize", updateTestimonials);
+
+    updateTestimonials();
+    restartTestimonialTimer();
 }
 
 /* ==========================================================
